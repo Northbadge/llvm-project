@@ -504,6 +504,10 @@ constexpr const char *saveTempsValues[] = {
     "resolution", "preopt",     "promote", "internalize",  "import",
     "opt",        "precodegen", "prelink", "combinedindex"};
 
+constexpr const char *ltoExitOnValues[] = {"preopt", "promote", "internalize",
+                                           "import", "opt",     "precodegen",
+                                           "prelink"};
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -1099,6 +1103,12 @@ static void readConfigs(opt::InputArgList &args) {
                                             OPT_no_lto_pgo_warn_mismatch, true);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
+  config->ltoExitOn = args.getLastArgValue(OPT_lto_exit_on_eq);
+  if (!config->ltoExitOn.empty() &&
+      !llvm::is_contained(ltoExitOnValues, config->ltoExitOn)) {
+    error("unknown --lto-exit-on value: " + config->ltoExitOn);
+    config->ltoExitOn = "";
+  }
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoWholeProgramVisibility =
       args.hasFlag(OPT_lto_whole_program_visibility,
@@ -2595,9 +2605,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // --plugin-opt=emit-asm create output files in bitcode or assembly code,
   // respectively. When only certain thinLTO modules are specified for
   // compilation, the intermediate object file are the expected output.
-  const bool skipLinkedOutput = config->thinLTOIndexOnly || config->emitLLVM ||
-                                config->ltoEmitAsm ||
-                                !config->thinLTOModulesToCompile.empty();
+  // --lto-exit-on is specified to prevent the linker from executing after
+  // certain LTO stages.
+  const bool skipLinkedOutput =
+      config->thinLTOIndexOnly || config->emitLLVM || config->ltoEmitAsm ||
+      !config->ltoExitOn.empty() || !config->thinLTOModulesToCompile.empty();
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.

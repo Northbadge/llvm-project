@@ -182,6 +182,9 @@ static lto::Config createConfig() {
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath*/ true,
                               config->saveTempsArgs));
+
+  if (!config->ltoExitOn.empty() && config->ltoExitOn != "prelink")
+    checkError(c.addExitOn(config->ltoExitOn));
   return c;
 }
 

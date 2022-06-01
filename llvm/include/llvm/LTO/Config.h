@@ -273,6 +273,13 @@ struct Config {
   Error addSaveTemps(std::string OutputFileName,
                      bool UseInputModulePath = false,
                      const DenseSet<StringRef> &SaveTempsArgs = {});
+
+  /// Configures this Config object to stop executing further LTO/linker stages
+  /// upon reaching a specified stage.
+  /// This is done by modifying the above module hooks such that they:
+  /// 1) Run the existing hook, if any.
+  /// 2) return false.
+  Error addExitOn(StringRef LTOExitOn);
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {

@@ -65,6 +65,10 @@ static cl::opt<std::string> AAPipeline("aa-pipeline",
                                        cl::desc("Alias Analysis Pipeline"),
                                        cl::value_desc("aapipeline"));
 
+static cl::opt<std::string> ExitOn(
+    "exit-on", cl::desc("Stop LTO at a given stage"),
+    cl::value_desc("One of: preopt,promote,internalize,import,opt,precodegen"));
+
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
 static cl::list<std::string> SelectSaveTemps(
@@ -287,6 +291,9 @@ static int run(int argc, char **argv) {
     check(Conf.addSaveTemps(OutputFilename + ".", false, SaveTempsArgs),
           "Config::addSaveTemps failed");
   }
+
+  if (!ExitOn.empty())
+    check(Conf.addExitOn(ExitOn), "Config::addExitOn failed");
 
   // Optimization remarks.
   Conf.RemarksFilename = RemarksFilename;

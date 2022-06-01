@@ -31,6 +31,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -171,6 +172,36 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
     if (SaveTempsArgs.contains("combinedindex"))
       CombinedIndexHook = SaveCombinedIndex;
   }
+
+  return Error::success();
+}
+
+Error Config::addExitOn(StringRef LTOExitOn) {
+  auto setHook = [&](ModuleHookFn &Hook) {
+    // Keep track of the hook provided by the linker, which needs to run first.
+    ModuleHookFn LinkerHook = Hook;
+    Hook = [=](unsigned Task, const Module &M) {
+      if (LinkerHook)
+        LinkerHook(Task, M);
+      return false;
+    };
+  };
+
+  if (LTOExitOn == "preopt")
+    setHook(PreOptModuleHook);
+  else if (LTOExitOn == "promote")
+    setHook(PostPromoteModuleHook);
+  else if (LTOExitOn == "internalize")
+    setHook(PostInternalizeModuleHook);
+  else if (LTOExitOn == "import")
+    setHook(PostImportModuleHook);
+  else if (LTOExitOn == "opt")
+    setHook(PostOptModuleHook);
+  else if (LTOExitOn == "precodegen")
+    setHook(PreCodeGenModuleHook);
+  else
+    return make_error<StringError>("invalid addExitOn parameter: " + LTOExitOn,
+                                   errc::invalid_argument);
 
   return Error::success();
 }

@@ -549,6 +549,9 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_exit_on_eq: JJ<"lto-exit-on=">,
+  HelpText<"Stop the linker at a given stage. If using ThinLTO, linker will only exit after the given ThinLTO stage.">,
+  Values<"preopt,promote,internalize,import,opt,precodegen,prelink">;
 def no_lto_legacy_pass_manager: FF<"no-lto-legacy-pass-manager">,
   HelpText<"Use the new pass manager in LLVM">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
