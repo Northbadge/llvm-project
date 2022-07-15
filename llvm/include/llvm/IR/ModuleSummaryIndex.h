@@ -707,6 +707,8 @@ private:
   std::unique_ptr<ParamAccessesTy> ParamAccesses;
 
 public:
+  int64_t CallerCount = 0;
+
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
                   uint64_t EntryCount, std::vector<ValueInfo> Refs,
                   std::vector<EdgeTy> CGEdges,

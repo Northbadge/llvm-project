@@ -35,6 +35,7 @@ public:
   /// Set of functions to import from a source module. Each entry is a set
   /// containing all the GUIDs of all functions to import for a source module.
   using FunctionsToImportTy = std::unordered_set<GlobalValue::GUID>;
+  using FunctionImportCallback = std::function<void(Function &, Module &, const ModuleSummaryIndex &)>;
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
@@ -113,6 +114,7 @@ public:
   /// Import functions in Module \p M based on the supplied import list.
   Expected<bool> importFunctions(Module &M, const ImportMapTy &ImportList);
 
+  void setOnImport(FunctionImportCallback C) { OnImport = C; }
 private:
   /// The summaries index used to trigger importing.
   const ModuleSummaryIndex &Index;
@@ -123,6 +125,9 @@ private:
   /// See the comment of ClearDSOLocalOnDeclarations in
   /// Utils/FunctionImportUtils.h.
   bool ClearDSOLocalOnDeclarations;
+
+  /// TODO: Comment
+  FunctionImportCallback OnImport;
 };
 
 /// The function importing pass

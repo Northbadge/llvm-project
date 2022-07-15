@@ -74,6 +74,10 @@ cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
 
+cl::opt<bool> ThinLTOCalculateMetadata(
+    "thinlto-calculate-metadata", cl::init(false),
+    cl::desc("Calculates extra metadata from the ThinLTO index."));
+
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
 // The hash is produced in \p Key.
@@ -1205,6 +1209,77 @@ public:
     }
     return Error::success();
   }
+
+  void calculateMetadata() {
+    std::unordered_set<const llvm::ValueInfo *> MultiSummaryVI;
+    for (auto &i : CombinedIndex) {
+      // dbgs() << "GUID: "<< i.first << '\n';
+      if (!i.second.SummaryList.size() || !isa<FunctionSummary>(i.second.SummaryList.front().get()))
+          continue;
+      const auto &S = i.second.SummaryList.front(); // For first summary in the summary list, normally there's only one, unless comdat
+      const auto *CallerFS = cast<FunctionSummary>(S.get()->getBaseObject()); // cast it to a function summary
+      // dbgs() << CallerFS->calls().size() << '\n';
+      for (auto &F : CallerFS->calls()) {
+        const llvm::ValueInfo &VI = F.first;
+        if (VI.getSummaryList().size() > 1) {
+          MultiSummaryVI.insert(&VI);
+        }
+        if (!VI.getSummaryList().size() || !isa<FunctionSummary>(VI.getSummaryList().front().get()))
+          continue;
+        auto *CalleeFS = cast<FunctionSummary>(VI.getSummaryList().front().get()->getBaseObject());
+        ++(CalleeFS->CallerCount);
+      }
+    }
+
+    // Sum up caller counts across comdats
+    for (auto *VI : MultiSummaryVI) {
+      break; // This has a bug! The summary list is NOT stored somewhere as I previously thought
+      uint64_t TotalCalls = 0;
+      for (const auto &S : VI->getSummaryList()) {
+        if (!VI->getSummaryList().size() || !isa<FunctionSummary>(VI->getSummaryList().front().get()))
+          continue;
+        const auto *CalleeFS = cast<FunctionSummary>(S.get()->getBaseObject());
+        TotalCalls += CalleeFS->CallerCount;
+      }
+      for (const auto &S : VI->getSummaryList()) {
+        if (!VI->getSummaryList().size() || !isa<FunctionSummary>(VI->getSummaryList().front().get()))
+          continue;
+        auto *CalleeFS = cast<FunctionSummary>(S.get()->getBaseObject());
+        CalleeFS->CallerCount = TotalCalls;
+      }
+    }
+    for (auto &i : CombinedIndex) {
+      if (i.second.SummaryList.size() < 2 || !isa<FunctionSummary>(i.second.SummaryList.front().get()))
+          continue;
+      // dbgs() << "" << i.second.U.Name << "(GUID " << i.first << ")";
+      // const auto &fsone = cast<FunctionSummary>(i.second.SummaryList.front().get()->getBaseObject());
+      // dbgs() <<  " in module " << fsone->modulePath() << ": ";
+      int64_t TotalCalls = 0;
+      for (const auto& S : i.second.SummaryList) {
+        const auto &x = cast<FunctionSummary>(S.get()->getBaseObject());
+        TotalCalls += x->CallerCount;
+        //dbgs() << "Caller Count: " << x->CallerCount << '\t';
+      }
+      for (const auto& S : i.second.SummaryList) {
+        const auto &x = cast<FunctionSummary>(S.get()->getBaseObject());
+        x->CallerCount = TotalCalls;
+      }
+      // dbgs() << '\n';
+    }
+    return;
+    for (auto &i : CombinedIndex) {
+      if (!i.second.SummaryList.size() || !isa<FunctionSummary>(i.second.SummaryList.front().get()))
+          continue;
+      dbgs() << "" << i.second.U.Name << "(GUID " << i.first << ")";
+      const auto &fsone = cast<FunctionSummary>(i.second.SummaryList.front().get()->getBaseObject());
+      dbgs() <<  " in module " << fsone->modulePath() << ": ";
+      for (const auto& S : i.second.SummaryList) {
+        const auto &x = cast<FunctionSummary>(S.get()->getBaseObject());
+        dbgs() << "Caller Count: " << x->CallerCount << '\n';
+      }
+    }
+    return;
+  }
 };
 
 namespace {
@@ -1563,6 +1638,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   std::unique_ptr<ThinBackendProc> BackendProc =
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, Cache);
+
+  if (ThinLTOCalculateMetadata)
+    BackendProc->calculateMetadata();
 
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;

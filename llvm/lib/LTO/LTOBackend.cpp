@@ -71,6 +71,10 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
+static cl::opt<bool> ThinLTOEmbedMetadata(
+    "thinlto-embed-metadata", cl::init(false),
+    cl::desc("Embed ThinLTO-index sourced information as function metadata."));
+
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 }
@@ -535,12 +539,45 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
   }
 }
 
+
+void writeCGMD(Function &F, Module &M, const ModuleSummaryIndex &Index) {
+  // dbgs() << "Checking " << F.getName() << ": ";
+
+  if (F.isDeclaration()) {
+    // dbgs() << "Is a declaration\n";
+    return;
+  }
+  const GlobalValueSummary *GVS = Index.findSummaryInModule(F.getGUID(), F.getParent()->getModuleIdentifier());
+  if (!GVS || !isa<FunctionSummary>(GVS->getBaseObject())) {
+    // dbgs() << "Has no function summary\n";
+    return;
+  }
+  const FunctionSummary *FS = cast<FunctionSummary>(GVS->getBaseObject());
+  // dbgs() << "Has " << FS->CallerCount << " callers\n";
+
+  F.setMetadata("gcg.callers",
+    MDNode::get(M.getContext(),
+      ConstantAsMetadata::get(
+        ConstantInt::get(M.getContext(),
+                        llvm::APInt(64, FS->CallerCount, true)
+                        )
+      )
+    )
+  );
+  // dbgs() << cast<ConstantInt>(dyn_cast<ConstantAsMetadata>(F.getMetadata("gcg.callers")->getOperand(0))->getValue())->getZExtValue();
+}
+
+
 Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
                        const std::vector<uint8_t> &CmdArgs) {
+  if (ThinLTOEmbedMetadata)
+    for (Function &F : Mod)
+        writeCGMD(F, Mod, CombinedIndex);
+
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -641,6 +678,10 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader,
                             ClearDSOLocalOnDeclarations);
+
+  if (ThinLTOEmbedMetadata)
+    Importer.setOnImport(writeCGMD);
+
   if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
     return Err;
 

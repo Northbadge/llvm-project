@@ -103,7 +103,14 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
     "number of blocks reached from a conditional instruction, in the callee")  \
   M(CalleeUsers, "callee_users",                                               \
     "number of module-internal users of the callee, +1 if the callee is "      \
-    "exposed externally")
+    "exposed externally")                                                      \
+  M(GlobalCalleeUsers, "global_callee_users",                                  \
+    "number of global users of the callee")                                    \
+  M(GlobalCallerUsers, "global_caller_users",                                  \
+    "number of global users of the caller")                                    \
+  M(Progress, "progress",                                                      \
+    "Progress of the optimization phase, i.e. the number of times the "        \
+    "inlining pass has been run")
 
 // clang-format off
 enum class FeatureIndex : size_t {

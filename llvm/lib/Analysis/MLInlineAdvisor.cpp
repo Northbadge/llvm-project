@@ -27,6 +27,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/IR/Constants.h"
 
 using namespace llvm;
 
@@ -140,6 +141,7 @@ unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
 }
 
 void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
+  ++Progress;
   if (!LastSCC || ForceStop)
     return;
   FPICache.clear();
@@ -363,7 +365,19 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
       CalleeBefore.BlocksReachedFromConditionalInstruction;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::CalleeUsers) =
       CalleeBefore.Uses;
+  int64_t GlobalCalleeUsers = 0;
+  int64_t GlobalCallerUsers = 0;
+  // metadata retrieval has that many derefs...
+  if (auto *MD = Callee.getMetadata("gcg.callers"))
+    GlobalCalleeUsers = cast<ConstantInt>(dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())->getSExtValue();
+  if (auto *MD = Caller.getMetadata("gcg.callers"))
+    GlobalCallerUsers = cast<ConstantInt>(dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())->getSExtValue();
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::GlobalCalleeUsers) = GlobalCalleeUsers;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::GlobalCallerUsers) = GlobalCallerUsers;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::Progress) = Progress;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::CostEstimate) = CostEstimate;
+
+
 
   // Add the cost features
   for (size_t I = 0;

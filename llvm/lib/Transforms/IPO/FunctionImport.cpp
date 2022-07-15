@@ -1259,6 +1259,8 @@ Expected<bool> FunctionImporter::importFunctions(
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
         }
+        if (OnImport)
+          OnImport(F, DestModule, Index);
         GlobalsToImport.insert(&F);
       }
     }
@@ -1303,6 +1305,8 @@ Expected<bool> FunctionImporter::importFunctions(
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
         }
+        if (OnImport)
+          OnImport(*Fn, DestModule, Index);
         GlobalsToImport.insert(Fn);
       }
     }

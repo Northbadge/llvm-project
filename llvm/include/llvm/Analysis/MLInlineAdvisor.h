@@ -83,6 +83,7 @@ private:
   llvm::SmallPtrSet<const LazyCallGraph::Node *, 1> NodesInLastSCC;
   DenseSet<const LazyCallGraph::Node *> AllNodes;
   bool ForceStop = false;
+  int64_t Progress = 0;
 };
 
 /// InlineAdvice that tracks changes post inlining. For that reason, it only
