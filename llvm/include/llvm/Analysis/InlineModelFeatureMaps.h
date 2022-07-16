@@ -110,7 +110,9 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
     "number of global users of the caller")                                    \
   M(Progress, "progress",                                                      \
     "Progress of the optimization phase, i.e. the number of times the "        \
-    "inlining pass has been run")
+    "inlining pass has been run")                                              \
+  M(Linkage, "linkage",                                                        \
+    "linkage type")
 
 // clang-format off
 enum class FeatureIndex : size_t {

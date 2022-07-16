@@ -46,16 +46,16 @@ public:
   /// An enumeration for the kinds of linkage for global values.
   enum LinkageTypes {
     ExternalLinkage = 0,///< Externally visible function
-    AvailableExternallyLinkage, ///< Available for inspection, not emission.
-    LinkOnceAnyLinkage, ///< Keep one copy of function when linking (inline)
-    LinkOnceODRLinkage, ///< Same, but only replaced by something equivalent.
-    WeakAnyLinkage,     ///< Keep one copy of named function when linking (weak)
-    WeakODRLinkage,     ///< Same, but only replaced by something equivalent.
-    AppendingLinkage,   ///< Special purpose, only applies to global arrays
-    InternalLinkage,    ///< Rename collisions when linking (static functions).
-    PrivateLinkage,     ///< Like Internal, but omit from symbol table.
-    ExternalWeakLinkage,///< ExternalWeak linkage description.
-    CommonLinkage       ///< Tentative definitions.
+    AvailableExternallyLinkage = 1, ///< Available for inspection, not emission.
+    LinkOnceAnyLinkage = 2, ///< Keep one copy of function when linking (inline)
+    LinkOnceODRLinkage = 3, ///< Same, but only replaced by something equivalent.
+    WeakAnyLinkage = 4,     ///< Keep one copy of named function when linking (weak)
+    WeakODRLinkage = 5,     ///< Same, but only replaced by something equivalent.
+    AppendingLinkage = 6,   ///< Special purpose, only applies to global arrays
+    InternalLinkage = 7,    ///< Rename collisions when linking (static functions).
+    PrivateLinkage = 8,     ///< Like Internal, but omit from symbol table.
+    ExternalWeakLinkage = 9,///< ExternalWeak linkage description.
+    CommonLinkage = 10       ///< Tentative definitions.
   };
 
   /// An enumeration for the kinds of visibility of global values.

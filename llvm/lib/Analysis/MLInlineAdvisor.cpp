@@ -376,6 +376,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   *ModelRunner->getTensor<int64_t>(FeatureIndex::GlobalCallerUsers) = GlobalCallerUsers;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::Progress) = Progress;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::CostEstimate) = CostEstimate;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::Linkage) = Callee.getLinkage();
 
 
 
