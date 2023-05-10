@@ -356,6 +356,11 @@ void RunFreeHooks(void *ptr) {
   }
 }
 
+void RunFreeHooks(void *ptr, uptr size) {
+  __sanitizer_sized_free_hook(ptr, size);
+  RunFreeHooks(ptr);
+}
+
 static int InstallMallocFreeHooks(void (*malloc_hook)(const void *, uptr),
                                   void (*free_hook)(const void *)) {
   if (!malloc_hook || !free_hook) return 0;
@@ -416,6 +421,12 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook, void *ptr,
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
   (void)ptr;
+}
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sized_free_hook, void *ptr,
+                             uptr size) {
+  (void)ptr;
+  (void)size;
 }
 
 } // extern "C"

@@ -177,6 +177,7 @@ bool DontDumpShadowMemory(uptr addr, uptr length);
 void CheckVMASize();
 void RunMallocHooks(void *ptr, uptr size);
 void RunFreeHooks(void *ptr);
+void RunFreeHooks(void *ptr, uptr size);
 
 class ReservedAddressRange {
  public:
